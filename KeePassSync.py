@@ -18,7 +18,7 @@ def get_file_win_properties(fname):
         'FileDescription', 'LegalTrademarks', 'PrivateBuild',
         'FileVersion', 'OriginalFilename', 'SpecialBuild')
 
-    props = {'FixedFileInfo': None, 'StringFileInfo': None, 'FileVersion': None}
+    props = {'FileVersion': "0.0.0"}
 
     try:
         # backslash as parm returns dictionary of numeric info corresponding to VS_FIXEDFILEINFO struc
@@ -80,7 +80,6 @@ def extract_zip(path_to_zip, out_dir):
             if f.is_dir():
                 continue
             name, date_time = f.filename, f.date_time
-            print(out_dir, name, os.path.join(out_dir, os.path.normpath(name)))
             name = os.path.join(out_dir, os.path.normpath(name))
             if not os.path.exists(os.path.dirname(name)):
                 os.makedirs(os.path.dirname(name))
@@ -106,6 +105,13 @@ def update_exe(folder):
     os.remove(path_to_zip)
     print("Done")
 
+def dropbox_file_exists(dbx, path):
+    try:
+        dbx.files_get_metadata(path)
+        return True
+    except:
+        return False
+
 def main(args):
     update_exe(args.folder)
 
@@ -114,12 +120,18 @@ def main(args):
 
     path_to_kdb_local = os.path.abspath(args.kdb_path)
     path_to_kdb_dropbox = args.dropbox_folder + os.path.basename(path_to_kdb_local)
+    kdb_exists_in_dropbox = dropbox_file_exists(dbx, path_to_kdb_dropbox)
 
-    print("Downloading kdb...",)
-    dbx.files_download_to_file(path_to_kdb_local, path_to_kdb_dropbox)
-    print("Done")
+    if kdb_exists_in_dropbox:
+        print("Downloading kdb...",)
+        dbx.files_download_to_file(path_to_kdb_local, path_to_kdb_dropbox)
+        print("Done")
+    else:
+        print("Database doesn't exist in Dropbox")
 
-    local_modification_time = os.path.getmtime(path_to_kdb_local)
+    local_modification_time = None
+    if os.path.exists(path_to_kdb_local):
+        local_modification_time = os.path.getmtime(path_to_kdb_local)
 
     print("Open KeePass")
     p = subprocess.Popen((os.path.join(args.folder, "KeePass.exe"), path_to_kdb_local))
@@ -129,7 +141,7 @@ def main(args):
 
     kdb_changed = local_modification_time != os.path.getmtime(path_to_kdb_local)
 
-    if kdb_changed:
+    if kdb_changed or not kdb_exists_in_dropbox:
         print("Kdb changed, uploading...")
         with open(path_to_kdb_local, 'rb') as f:
             file_contents = f.read()
