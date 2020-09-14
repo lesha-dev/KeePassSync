@@ -43,16 +43,27 @@ def get_file_win_properties(fname):
 
     return props
 
+def remove_trailing_zeroes(s):
+    return re.sub(r"\.0\.0$", "", s)
+
 def get_version(path):
     version = get_file_win_properties(path)['FileVersion']
-    version = re.sub(r"\.0\.0$", "", version)
+    version = remove_trailing_zeroes(version)
     return version
 
-def get_server_version():
+def get_server_version(major_version):
     print("Checking for updates...")
-    response = requests.Session().get("https://keepass.info/update/version2x.txt")
-    r = re.search(r"KeePass:([^\n^\r]*)", response.text)
-    version = r.group(1)
+    if major_version == 1:
+        response = requests.Session().get("https://keepass.info/update/version1x.txt")
+        #KeePass#1.38.0.0
+        r = re.search(r"KeePass#([^\n^\r]*)", response.text)
+        version = r.group(1)
+        version = remove_trailing_zeroes(version)
+    else:
+        response = requests.Session().get("https://keepass.info/update/version2x.txt")
+        #KeePass:2.46
+        r = re.search(r"KeePass:([^\n^\r]*)", response.text)
+        version = r.group(1)
     return version
 
 def download_to_tmp(url):
@@ -90,7 +101,8 @@ def extract_zip(path_to_zip, out_dir):
 
 def update_exe(folder):
     file_version = get_version(os.path.join(folder, "KeePass.exe"))
-    server_version = get_server_version()
+    major_version = int(file_version[0])
+    server_version = get_server_version(major_version)
     if file_version == server_version:
         print("Exe is up to date")
         return
@@ -99,7 +111,7 @@ def update_exe(folder):
     version = server_version
     while version[-2:] == ".0":
         version = version[:-2]
-    download_lnk = "https://netix.dl.sourceforge.net/project/keepass/KeePass%%202.x/%(version)s/KeePass-%(version)s.zip" % {"version": version}
+    download_lnk = "https://netix.dl.sourceforge.net/project/keepass/KeePass%%20%(major_version)d.x/%(version)s/KeePass-%(version)s.zip" % {"version": version, "major_version": major_version}
     path_to_zip = download_to_tmp(download_lnk)
     extract_zip(path_to_zip, folder)
     os.remove(path_to_zip)
@@ -157,10 +169,10 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--folder", help="path to keepass folder", default=".")
     parser.add_argument("-t", "--token", help="dropbox api token", required=True)
+    parser.add_argument("-f", "--folder", help="path to keepass folder", default=".")
     parser.add_argument("-kdb", "--kdb-path", help="path to keepass kdb", default="Database.kdbx")
-    parser.add_argument("-dp", "--dropbox-folder", help="dropbox folder to database file", default="/")
+    parser.add_argument("-df", "--dropbox-folder", help="dropbox folder to database file", default="/")
     parser.add_argument("-r", "--remove-local-kdb", action="store_true", default=False, help="remove kdb from local folder after syncing")
 
     args = parser.parse_args()
