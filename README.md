@@ -16,6 +16,18 @@
 
 `-r/--remove-local-kdb` - удалять ли локальный файл с паролями после синхронизации. По умолчанию: не удалять
 
+## Примеры
+```
+Запустить скрипт из папки с KeePass 2.x и синхронизировать файл паролей Database.kdbx:
+python KeePassSync.py -t "xxxxxxxxx"
+
+Запустить скрипт из папки с KeePass 1.x:
+python KeePassSync.py -t "xxxxxxxxx" -kdb Database.kdb
+
+Запустить скрипт для всего в разных папках и удалить файл паролей после синхронизации:
+python KeePassSync.py -t "xxxxxxxxx" -f d:\bin\KeePass2 -kdb d:\data\Passwords.kdbx -r
+```
+
 # Подробный мануал по настройке
 ## 1. Настройка питона
 * Если у тебя нет Python 3, то установи его: https://www.python.org/ftp/python/3.8.5/python-3.8.5-amd64.exe
